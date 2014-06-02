@@ -1,0 +1,22 @@
+{
+    "name": "marks/acl",
+    "description": "ACL service for Laravel 4.x",
+    "keywords": ["laravel", "acl"],
+	"license": "MIT",
+    "authors": [
+        {
+            "name": "Marek Galovic",
+            "email": "techfyou@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0",
+        "illuminate/support": "4.1.*"
+    },
+    "autoload": {
+        "psr-0": {
+            "Marks\\Acl": "src/"
+        }
+    },
+    "minimum-stability": "stable"
+}
