@@ -17,14 +17,31 @@ class AclClass{
 	private $acoID = 0;
 	private $aroID = 0;
 	private $allowed = false;
+	private $permissions;
+	
+	//configuration
+	private $maxGroups = 4;
+	private $userModel = "User";
 	
 	public function __construct(){
+		$this->permissions = $this->getAll();
+		$this->loadConfig();
+	}
 	
+	//load configuration
+	private function loadConfig(){
+		$this->maxGroups = \Config::get("acl.max_groups");
 	}
 	
 	//identify user
 	public function identify($id){
 		$this->aroID = $id;
+	}
+	
+	//return if is allowed
+	public function allowed(){
+		$this->loadRoute();
+		return $this->check();	
 	}
 	
 	//check if user is allowed to perform action
@@ -35,12 +52,6 @@ class AclClass{
 			$this->allowed = $allowed->allowed;
 		}
 		return $this->allowed;	
-	}
-	
-	//return if is allowed
-	public function allowed(){
-		$this->loadRoute();
-		return $this->check();	
 	}
 	
 	private function loadRoute(){
@@ -61,7 +72,7 @@ class AclClass{
 	}
 	
 	//set permission
-	public function set($acoID = 0, $aroID = 0, $permission = false){
+	public function set($acoID = 0, $aroID = 0, $permission){
 		if($acoID == 0 || $aroID == 0){
 			return false;
 		}else{
@@ -69,7 +80,7 @@ class AclClass{
 			if(!$record->get()){
 				\DB::table("acl_aco_aro")->insert(array("aco_id" => $acoID, "aro_id" => $aroID, "allowed" => $permission));
 			}else{
-				$record->update(array("allowed" => $permission));
+				\DB::table("acl_aco_aro")->where("aco_id", "=", $acoID)->where("aro_id", "=", $aroID)->update(array("allowed" => $permission));
 			}
 			return true;
 		}
@@ -77,13 +88,50 @@ class AclClass{
 	
 	
 	//add group
-	public function addGroup($name = ""){
-		if(empty($name)){
-			return false;
+	public function addGroup($name = "", $default){
+		if(Aro::count() < $this->maxGroups){
+			if($default === true){
+				$this->removeDefaultGroup();
+			}	
+			if(empty($name)){
+				return false;
+			}else{
+				Aro::firstOrCreate(array("name"=>$name, "isdefault"=>$default));
+				return true;
+			}
 		}else{
-			Aro::firstOrCreate(array("name"=>$name));
+			return false;
+		}
+	}
+	
+	public function editGroup($id, $data = array()){
+		if($data["default"] === true){
+			$this->removeDefaultGroup();
+		}
+		if(Aro::find($id)->update(array("name"=>$data["name"], "isdefault"=>$data["default"]))){
 			return true;
 		}
+		return false;
+	}
+	
+	public function deleteGroup($id){
+		$group = $this->getGroup($id);
+		if($group->isdefault == true){
+			return false;	
+		}else{
+			$defaultID = $this->getDefault()->id;
+			$model = $this->userModel;
+			$model::where("grp", "=", $group->id)->update(array("grp"=>$defaultID));
+			if($group->destroy($id)){
+				return true;
+			}else{
+				return false;
+			}
+		}
+	}
+	
+	public function removeDefaultGroup(){
+		Aro::where("isdefault", "=", true)->update(array("isdefault"=>false));
 	}
 	
 	//get list of all groups (AROS)
@@ -104,6 +152,35 @@ class AclClass{
 	//get specific controller or action
 	public function getResource($id){
 		return Aco::find($id);
+	}
+	
+	//get default group
+	public function getDefault(){
+		return Aro::where("isdefault", "=", true)->first();
+	}
+	
+	//get string of group model
+	public function group(){
+		return "Marks\Acl\Models\Aro";
+	}
+	
+	//get all permissions
+	public function getAll(){
+		$permissions = array();
+		$data = \DB::table("acl_aco_aro")->get();	
+		foreach($data as $permission){
+			$permissions[$permission->aco_id][$permission->aro_id] = $permission->allowed;
+		}
+		return $permissions;
+	}
+	
+	//get from permissions array
+	public function getPermission($acoID = 0, $aroID = 0){
+		if(isset($this->permissions[$acoID][$aroID])){
+			return $this->permissions[$acoID][$aroID];
+		}else{
+			return false;
+		}
 	}
 	
 		

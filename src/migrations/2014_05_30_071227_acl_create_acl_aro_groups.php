@@ -16,6 +16,7 @@ class AclCreateAclAroGroups extends Migration {
 		Schema::create("acl_aro_groups", function(Blueprint $t){
 			$t->increments("id");
 			$t->string("name");
+			$t->boolean("isdefault");
 			$t->timestamps();
 		});
 		
