@@ -1,5 +1,5 @@
 <?php
-namespace Marks\Acl;
+namespace Marks\Acl\Resources;
 
 use Illuminate\Routing\Router,
 	Marks\Acl\Models\Aco as Aco;

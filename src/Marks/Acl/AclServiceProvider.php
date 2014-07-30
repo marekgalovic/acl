@@ -45,6 +45,11 @@ class AclServiceProvider extends ServiceProvider {
 			return new \Marks\Acl\Console\ScanActionsCommand;
 		});
 		$this->commands('command.acl.scan-actions');
+		//seeding command
+		$this->app['command.acl.seed-initial'] = $this->app->share(function($app){
+			return new \Marks\Acl\Console\SeedCommand;
+		});
+		$this->commands("command.acl.seed-initial");
 	}
 
 	/**

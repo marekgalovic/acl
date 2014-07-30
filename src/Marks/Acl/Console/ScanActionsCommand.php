@@ -2,7 +2,7 @@
 namespace Marks\Acl\Console;
 
 use Illuminate\Console\Command,
-	Marks\Acl\ControllerScanner as Scanner;
+	Marks\Acl\Resources\ControllerScanner as Scanner;
 
 class ScanActionsCommand extends Command {
 
