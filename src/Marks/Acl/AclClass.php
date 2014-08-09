@@ -18,24 +18,41 @@ class AclClass{
 	private $aroID = 0;
 	private $allowed = false;
 	private $permissions;
+	public $type;
 	
 	//configuration
 	private $maxGroups = 4;
-	private $userModel = "User";
+	public $config = array();
+	
 	
 	public function __construct(){
 		$this->permissions = $this->getAll();
 		$this->loadConfig();
 	}
 	
+	public function __call($type, $args){
+		$this->type = strtolower($type);
+		return $this;
+	}
+	
 	//load configuration
 	private function loadConfig(){
 		$this->maxGroups = \Config::get("acl.max_groups");
+		$this->config = \Config::get("acl");
+	}
+	
+	public function getZones(){
+		return $this->config["zones"];
+	}
+	
+	public function getDefaultZone(){
+		return $this->config["default_zone"];
 	}
 	
 	//identify user
 	public function identify($id){
 		$this->aroID = $id;
+		return $this;
 	}
 	
 	//return if is allowed
@@ -46,7 +63,7 @@ class AclClass{
 	
 	//check if user is allowed to perform action
 	public function check(){
-		$allowed = \DB::table("acl_aco_aro")->where("aro_id", "=", $this->aroID)->where("aco_id", "=", $this->acoID)->first();
+		$allowed = \DB::table("acl_aco_aro")->where("aro_id", "=", $this->aroID)->where("aco_id", "=", $this->acoID)->where("type","=", $this->type)->first();
 		if(!$allowed){}
 		else{
 			$this->allowed = $allowed->allowed;
@@ -76,11 +93,11 @@ class AclClass{
 		if($acoID == 0 || $aroID == 0){
 			return false;
 		}else{
-			$record = \DB::table("acl_aco_aro")->where("aco_id", "=", $acoID)->where("aro_id", "=", $aroID);
+			$record = \DB::table("acl_aco_aro")->where("aco_id", "=", $acoID)->where("aro_id", "=", $aroID)->where("type", "=", $this->type);
 			if(!$record->get()){
-				\DB::table("acl_aco_aro")->insert(array("aco_id" => $acoID, "aro_id" => $aroID, "allowed" => $permission));
+				\DB::table("acl_aco_aro")->insert(array("aco_id" => $acoID, "aro_id" => $aroID, "allowed" => $permission, "type" => $this->type));
 			}else{
-				\DB::table("acl_aco_aro")->where("aco_id", "=", $acoID)->where("aro_id", "=", $aroID)->update(array("allowed" => $permission));
+				\DB::table("acl_aco_aro")->where("aco_id", "=", $acoID)->where("aro_id", "=", $aroID)->where("type", "=", $this->type)->update(array("allowed" => $permission));
 			}
 			return true;
 		}
@@ -89,14 +106,14 @@ class AclClass{
 	
 	//add group
 	public function addGroup($name = "", $default){
-		if(Aro::count() < $this->maxGroups){
+		if(Aro::where("type","=", $this->type)->count() < $this->maxGroups){
 			if($default === true){
 				$this->removeDefaultGroup();
 			}	
 			if(empty($name)){
 				return false;
 			}else{
-				Aro::firstOrCreate(array("name"=>$name, "isdefault"=>$default));
+				Aro::firstOrCreate(array("name"=>$name, "type"=>$this->type, "isdefault"=>$default));
 				return true;
 			}
 		}else{
@@ -108,7 +125,7 @@ class AclClass{
 		if($data["default"] === true){
 			$this->removeDefaultGroup();
 		}
-		if(Aro::find($id)->update(array("name"=>$data["name"], "isdefault"=>$data["default"]))){
+		if(Aro::find($id)->update(array("name"=>$data["name"], "type"=>$this->type, "isdefault"=>$data["default"]))){
 			return true;
 		}
 		return false;
@@ -120,8 +137,9 @@ class AclClass{
 			return false;	
 		}else{
 			$defaultID = $this->getDefault()->id;
-			$model = $this->userModel;
-			$model::where("grp", "=", $group->id)->update(array("grp"=>$defaultID));
+			$model = $this->config[$this->type]["model"];
+			$col = $this->config[$this->type]["col"];
+			$model::where($col, "=", $group->id)->update(array($col=>$defaultID));
 			if($group->destroy($id)){
 				return true;
 			}else{
@@ -131,17 +149,17 @@ class AclClass{
 	}
 	
 	public function removeDefaultGroup(){
-		Aro::where("isdefault", "=", true)->update(array("isdefault"=>false));
+		Aro::where("isdefault", "=", true)->where("type", "=", $this->type)->update(array("isdefault"=>false));
 	}
 	
 	//get list of all groups (AROS)
 	public function getGroups(){
-		return Aro::all();
+		return Aro::where("type", "=", $this->type)->get();
 	}
 	
 	//get specific group (ARO)
 	public function getGroup($id){
-		return Aro::find($id);	
+		return Aro::where("type", "=", $this->type)->where("id", "=", $id)->first();	
 	}
 	
 	//get list of all controllers and actions
@@ -156,7 +174,7 @@ class AclClass{
 	
 	//get default group
 	public function getDefault(){
-		return Aro::where("isdefault", "=", true)->first();
+		return Aro::where("isdefault", "=", true)->where("type", "=", $this->type)->first();
 	}
 	
 	//get string of group model
@@ -169,15 +187,15 @@ class AclClass{
 		$permissions = array();
 		$data = \DB::table("acl_aco_aro")->get();	
 		foreach($data as $permission){
-			$permissions[$permission->aco_id][$permission->aro_id] = $permission->allowed;
+			$permissions[$permission->type][$permission->aco_id][$permission->aro_id] = $permission->allowed;
 		}
 		return $permissions;
 	}
 	
 	//get from permissions array
 	public function getPermission($acoID = 0, $aroID = 0){
-		if(isset($this->permissions[$acoID][$aroID])){
-			return $this->permissions[$acoID][$aroID];
+		if(isset($this->permissions[$this->type][$acoID][$aroID])){
+			return $this->permissions[$this->type][$acoID][$aroID];
 		}else{
 			return false;
 		}

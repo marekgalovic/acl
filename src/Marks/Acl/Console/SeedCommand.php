@@ -40,9 +40,11 @@ class SeedCommand extends Command {
 	{
 		//
 		$this->info("Creating initial admin group");
+		$defaultZone = \Config::get("acl.default_zone");
 		Aro::firstOrCreate(array(
-			"name"=>"Initial",
+			"name"=>"Default",
 			"isdefault"=>true,
+			"type"=>$defaultZone,
 		));
 		$this->info("Allowing initial group to access everything");
 		$acos = Aco::all();
@@ -51,6 +53,7 @@ class SeedCommand extends Command {
 				"aco_id"=>$aco->id,
 				"aro_id"=>1,
 				"allowed"=>1,
+				"type"=> $defaultZone,
 			));
 		}
 	}
