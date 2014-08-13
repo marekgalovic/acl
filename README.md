@@ -22,7 +22,7 @@ return array(
 	"default_zone"=>"default", //default zone (have to be in array of zones)
 	
 	//zone specific configuration
-	"admin" => array(
+	"default" => array(
 		"model" => "User", //model
 		"col" => "acl_group_id", //colum that specifies relation between model and acl group
 	),
