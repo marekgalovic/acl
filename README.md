@@ -1,6 +1,6 @@
 #Laravel multizone ACL
 
-This plugin allows you to separate access for users in different zones of your application. For example you have application which have administration part and front-end part, but you need both this parts to be controlled by acl separately. My plugin allows you to do this very easily.
+This plugin allows you to separate access for users in different zones of your application. This acl plugin is database oriented. For example you have application which have administration part and front-end part, but you need both this parts to be controlled by acl separately. My plugin allows you to do this very easily.
 
 ##Installation
 ```
