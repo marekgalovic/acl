@@ -41,7 +41,7 @@ class SetupAclCommand extends Command {
 		//
 		$this->info("Setup started");
 		$this->info("Database configuration...");
-		\Artisan::call("migrate", array("--path" => "vendor/marks/acl/src/migrations"));
+		\Artisan::call("migrate", array("--path" => "vendor/marks/acl/src/migrations", "--force"=>true));
 		$this->info("Done ....");
 		$this->info("Controllers scanning...");
 		\Artisan::call("acl:scan");
