@@ -15,6 +15,7 @@ class AclCreateAcos extends Migration {
 		//
 		Schema::create("acl_acos", function(Blueprint $t){
 			$t->increments("id");
+			$t->string("prefix")->nullable();
 			$t->string("controller");
 			$t->string("action");
 		});
@@ -28,6 +29,7 @@ class AclCreateAcos extends Migration {
 	public function down()
 	{
 		//
+		Schema::drop("acl_acos");
 	}
 
 }

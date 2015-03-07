@@ -31,6 +31,7 @@ class AclCreateAclAroGroups extends Migration {
 	public function down()
 	{
 		//
+		Schema::drop("acl_aro_groups");
 	}
 
 }

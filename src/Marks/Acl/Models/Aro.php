@@ -1,8 +1,8 @@
 <?php
 namespace Marks\Acl\Models;
 
-class Aro extends \Eloquent{
-	
+class Aro extends \Eloquent
+{
 	protected $table = "acl_aro_groups";
 	
 	public $fillable = array("name", "isdefault", "type");

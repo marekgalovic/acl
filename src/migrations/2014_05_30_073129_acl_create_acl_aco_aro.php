@@ -17,8 +17,6 @@ class AclCreateAclAcoAro extends Migration {
 			$t->increments("id");
 			$t->unsignedInteger("aco_id");
 			$t->unsignedInteger("aro_id");
-			$t->foreign("aco_id")->references("id")->on("acl_acos")->onUpdate("NO ACTION")->onDelete("NO ACTION");
-			$t->foreign("aro_id")->references("id")->on("acl_aro_groups")->onUpdate("NO ACTION")->onDelete("NO ACTION");
 			$t->string("type");
 			$t->boolean("allowed");
 		});
@@ -32,6 +30,7 @@ class AclCreateAclAcoAro extends Migration {
 	public function down()
 	{
 		//
+		Schema::drop("acl_aco_aro");
 	}
 
 }

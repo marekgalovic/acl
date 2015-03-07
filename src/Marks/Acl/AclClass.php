@@ -4,9 +4,10 @@
 
 namespace Marks\Acl;
 
-use Marks\Acl\ControllerScanner as Scanner,
-	Marks\Acl\Models\Aco as Aco,
-	Marks\Acl\Models\Aro as Aro;
+use Marks\Acl\ControllerScanner as Scanner;
+use	Marks\Acl\Models\Aco as Aco;
+use	Marks\Acl\Models\Aro as Aro;
+use	Marks\Acl\Models\AcoAro as AcoAro;
 
 class AclClass{
 	
@@ -55,17 +56,10 @@ class AclClass{
 		return $this;
 	}
 	
-	//return if is allowed
-	public function allowed(){
-		$this->loadRoute();
-		return $this->check();	
-	}
-	
 	//check if user is allowed to perform action
 	public function check(){
-		$allowed = \DB::table("acl_aco_aro")->where("aro_id", "=", $this->aroID)->where("aco_id", "=", $this->acoID)->where("type","=", $this->type)->first();
-		if(!$allowed){}
-		else{
+		$this->loadRoute();
+		if($allowed = AcoAro::where("aro_id", "=", $this->aroID)->where("aco_id", "=", $this->acoID)->where("type","=", $this->type)->first()){
 			$this->allowed = $allowed->allowed;
 		}
 		return $this->allowed;	
@@ -75,7 +69,11 @@ class AclClass{
 		$this->route = explode("@",\Route::currentRouteAction());
 		$this->controller = $this->route[0];
 		$this->action = end($this->route);
-		$this->acoID = Aco::where("controller", "=", $this->controller)->where("action", "=", $this->action)->firstOrFail()->id;
+		try{
+			$this->acoID = Aco::where("controller", "=", $this->controller)->where("action", "=", $this->action)->firstOrFail()->id;
+		}catch(\Exception $e){
+			throw new \Exception("Route not found");
+		}
 	}
 	
 	//call controller scanner
@@ -93,40 +91,37 @@ class AclClass{
 		if($acoID == 0 || $aroID == 0){
 			return false;
 		}else{
-			$record = \DB::table("acl_aco_aro")->where("aco_id", "=", $acoID)->where("aro_id", "=", $aroID)->where("type", "=", $this->type);
-			if(!$record->get()){
-				\DB::table("acl_aco_aro")->insert(array("aco_id" => $acoID, "aro_id" => $aroID, "allowed" => $permission, "type" => $this->type));
+			if($record = AcoAro::where("aco_id", "=", $acoID)->where("aro_id", "=", $aroID)->where("type", "=", $this->type)->first()){
+				$record->fill(array("allowed" => $permission));
 			}else{
-				\DB::table("acl_aco_aro")->where("aco_id", "=", $acoID)->where("aro_id", "=", $aroID)->where("type", "=", $this->type)->update(array("allowed" => $permission));
+				$record = new AcoAro;
+				$record->fill(array("aco_id" => $acoID, "aro_id" => $aroID, "allowed" => $permission, "type" => $this->type));
 			}
-			return true;
+			return $record->save();
 		}
+		return false;
 	}
 	
 	
 	//add group
-	public function addGroup($name = "", $default){
-		if(Aro::where("type","=", $this->type)->count() < $this->maxGroups){
+	public function addGroup($name = "", $default = false){
+		if((Aro::where("type","=", $this->type)->count() < $this->maxGroups)&&(!empty($name))){
 			if($default === true){
 				$this->removeDefaultGroup();
 			}	
-			if(empty($name)){
-				return false;
-			}else{
-				Aro::firstOrCreate(array("name"=>$name, "type"=>$this->type, "isdefault"=>$default));
-				return true;
-			}
-		}else{
-			return false;
+			$aro = new Aro(array("name"=>$name, "type"=>$this->type, "isdefault"=>$default));
+			return $aro->save();
 		}
+			return false;
 	}
 	
 	public function editGroup($id, $data = array()){
 		if($data["default"] === true){
 			$this->removeDefaultGroup();
 		}
-		if(Aro::find($id)->update(array("name"=>$data["name"], "type"=>$this->type, "isdefault"=>$data["default"]))){
-			return true;
+		if($group = Aro::find($id)){
+			$group->fill(update(array("name"=>$data["name"], "type"=>$this->type, "isdefault"=>$data["default"])));
+			return $group->save();
 		}
 		return false;
 	}
@@ -159,11 +154,17 @@ class AclClass{
 	
 	//get specific group (ARO)
 	public function getGroup($id){
-		return Aro::where("type", "=", $this->type)->where("id", "=", $id)->first();	
+		return Aro::where("type", "=", $this->type)->find($id);
 	}
 	
 	//get list of all controllers and actions
-	public function getResources(){
+	public function getResources($prefix = null){
+		if($prefix != null){
+			if(!is_array($prefix)){
+				$prefix = array($prefix);
+			}
+			return Aco::whereIn("prefix", $prefix)->get();
+		}
 		return Aco::all();
 	}
 	
@@ -178,14 +179,25 @@ class AclClass{
 	}
 	
 	//get string of group model
-	public function group(){
+	public function groupModel()
+	{
 		return "Marks\Acl\Models\Aro";
+	}
+
+	public function resourceModel()
+	{
+		return "Marks\Acl\Models\Aco";
+	}
+
+	public function pivotTable()
+	{
+		return "acl_aco_aro";
 	}
 	
 	//get all permissions
 	public function getAll(){
 		$permissions = array();
-		$data = \DB::table("acl_aco_aro")->get();	
+		$data = AcoAro::all();	
 		foreach($data as $permission){
 			$permissions[$permission->type][$permission->aco_id][$permission->aro_id] = $permission->allowed;
 		}
