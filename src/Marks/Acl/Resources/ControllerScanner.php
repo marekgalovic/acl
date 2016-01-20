@@ -15,8 +15,9 @@ class ControllerScanner{
 		$routes = \Route::getRoutes();
 		$list = array();
 		foreach ($routes as $route) {
+		   $action = $route->getAction();
 		   $routeArray = explode("@",$route->getActionName());
-		   $routePrefix = $route->getPrefix();
+		   $routePrefix = $action['acl_prefix'] ?: $route->getPrefix();
 		   $controller = $routeArray[0];
 		   if(!in_array($controller, $exceptControllers)){
 			   $action = end($routeArray);
