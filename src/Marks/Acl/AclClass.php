@@ -72,7 +72,7 @@ class AclClass{
 		try{
 			$this->acoID = Aco::where("controller", "=", $this->controller)->where("action", "=", $this->action)->firstOrFail()->id;
 		}catch(\Exception $e){
-			throw new \Exception("Route not found");
+			throw new \Exception("Route[{$this->controller}@{$this->action}] not found");
 		}
 	}
 	
