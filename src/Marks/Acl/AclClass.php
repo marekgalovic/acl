@@ -68,7 +68,8 @@ class AclClass{
 	private function loadRoute(){
 		$this->route = explode("@",\Route::currentRouteAction());
 		$this->controller = $this->route[0];
-		$this->action = str_replace(['get', 'post'], '', end($this->route));
+		preg_match('/(?:get|post)(.*)/', end($this->route), $routeMatch);
+		$this->action = end($routeMatch);
 		try{
 			$this->acoID = Aco::where("controller", "=", $this->controller)->where("action", "=", $this->action)->firstOrFail()->id;
 		}catch(\Exception $e){

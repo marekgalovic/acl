@@ -17,7 +17,8 @@ class ControllerScanner{
 		foreach ($routes as $route) {
 		   $action = $route->getAction();
 		   $routeArray = explode("@",$route->getActionName());
-		   $routeArray[1] = str_replace(['get', 'post'], '', $routeArray[1]);
+		   preg_match('/(?:get|post)(.*)/', $routeArray[1], $routeMatch);
+		   $routeArray[1] = end($routeMatch);
 		   $routePrefix = $action['acl_prefix'] ?: $route->getPrefix();
 		   $controller = $routeArray[0];
 		   if(!in_array($controller, $exceptControllers)){
